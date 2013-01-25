@@ -1,5 +1,6 @@
 var Chatty = {
     socket: null,
+    showTimestamp: true,
     init: function() {
         Chatty.socket = io.connect('http://www.vertsreis.dev:8080');
 
@@ -9,12 +10,7 @@ var Chatty = {
         }
 
         Chatty.socket.on('chat', function(data) {
-            var timestamp = (new Date()).toTimeString();
-            $('div').append(data.nick + ' (' + timestamp + '): ' + data.message + "<br />");
-        });
-
-        Chatty.socket.on('disc', function(data) {
-            $('div').append('SYSTEM (' + timestamp + '): ' + data.nick + " disconnected<br />");
+            $('div').append('<span>' + data.nick + '</span>' + Chatty.getTimestamp() + ': ' + data.message + "<br />");
         });
 
         $('input').keypress(function(e) {
@@ -24,6 +20,13 @@ var Chatty = {
                 $(this).val('');
             }
         });
+    },
+    getTimestamp: function() {
+        if (!Chatty.showTimestamp) {
+            return '';
+        }
+        var date = new Date();
+        return ' (' + ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2) + ':' + ('0' + date.getSeconds()).slice(-2) + ')';
     }
 };
 

@@ -15,10 +15,14 @@ app.get('/:filename', function(req, res) {
 io.sockets.on('connection', function(socket) {
     socket.set('nick', 'StupidNoob' + Math.floor((Math.random()*100)+1));
 
-    socket.on('nick', function(nick) {
+    socket.get('nick', function(err, nick) {
+        io.sockets.emit('chat', { nick: 'SYSTEM', message: nick + ' connected' });
+    });
+
+    socket.on('nick', function(newNick) {
         socket.get('nick', function(err, oldNick){
-            io.sockets.emit('update-nick', { oldNick: oldNick, newNick: nick });
-            socket.set('nick', nick);
+            io.sockets.emit('chat', { nick: 'SYSTEM', message: oldNick + ' changed nick to ' + newNick });
+            socket.set('nick', newNick);
         });
     });
 
@@ -30,7 +34,7 @@ io.sockets.on('connection', function(socket) {
 
     socket.on('disconnect', function() {
         socket.get('nick', function(err, nick) {
-            io.sockets.emit('disc', { nick: nick });
+            io.sockets.emit('chat', { nick: 'SYSTEM', message: nick + ' disconnected' });
         });
     });
 });
