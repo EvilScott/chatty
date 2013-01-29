@@ -10,7 +10,18 @@ var Chatty = {
         }
 
         Chatty.socket.on('chat', function(data) {
-            $('div').append('<span>' + data.nick + '</span>' + Chatty.getTimestamp() + ': ' + data.message + "<br />");
+            var $chat = $('#chat');
+            var message = '<span>' + data.nick + '</span>' + Chatty.getTimestamp() + ': ' + data.message + "<br />";
+            $chat.append(message);
+            $chat.scrollTop($chat.height());
+        });
+
+        Chatty.socket.on('addUser', function(data) {
+            $('#users').append("<p id='" + data.nick + "'>" + data.nick + "</p>");
+        });
+
+        Chatty.socket.on('removeUser', function(data) {
+            $('#users #' + data.nick).remove();
         });
 
         $('input').keypress(function(e) {
@@ -25,8 +36,11 @@ var Chatty = {
         if (!Chatty.showTimestamp) {
             return '';
         }
-        var date = new Date();
-        return ' (' + ('0' + date.getHours()).slice(-2) + ':' + ('0' + date.getMinutes()).slice(-2) + ':' + ('0' + date.getSeconds()).slice(-2) + ')';
+        var date = new Date()
+            , hours = ('0' + date.getHours()).slice(-2)
+            , minutes = ('0' + date.getMinutes()).slice(-2)
+            , seconds = ('0' + date.getSeconds()).slice(-2);
+        return ' (' + hours + ':' + minutes + ':' + seconds + ')';
     }
 };
 

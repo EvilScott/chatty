@@ -6,12 +6,32 @@ h1 {
     text-align: center;
 }
 
-div {
+div#container {
+    margin: 0 auto 20px;
+    text-align: center;
+}
+
+div#chat, div#users {
     background: white;
     border: 1px solid #ccc;
     height: 400px;
+    text-align: left;
+    padding: 10px;
+    overflow-y: scroll;
+}
+
+div#chat {
+    display: inline-block;
     width: 600px;
-    margin: 0 auto 20px;
+}
+
+div#users {
+    display: inline-block;
+    width: 200px;
+}
+
+div#users p {
+    margin: 0;
 }
 
 span {
