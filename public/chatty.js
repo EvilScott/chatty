@@ -4,11 +4,6 @@ var Chatty = {
     init: function() {
         Chatty.socket = io.connect('http://www.vertsreis.dev:8080');
 
-        var nick = prompt('Choose a nickname');
-        if (nick) {
-            Chatty.socket.emit('nick', nick);
-        }
-
         Chatty.socket.on('chat', function(data) {
             var $chat = $('#chat');
             var message = '<span>' + data.nick + '</span>' + Chatty.getTimestamp() + ': ' + data.message + "<br />";
@@ -31,6 +26,11 @@ var Chatty = {
                 $(this).val('');
             }
         });
+
+        var nick = prompt('Choose a nickname');
+        if (nick) {
+            Chatty.socket.emit('nick', nick);
+        }
     },
     getTimestamp: function() {
         if (!Chatty.showTimestamp) {

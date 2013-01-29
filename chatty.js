@@ -12,29 +12,45 @@ app.get('/:filename', function(req, res) {
     res.sendfile(__dirname + '/public/' + req.params.filename);
 });
 
-io.sockets.on('connection', function(socket) {
-    socket.set('nick', 'StupidNoob' + Math.floor((Math.random()*100)+1));
+var Chatty = {
+    users: [],
+    messages: [],
+    init: function() {
+        io.sockets.on('connection', function(socket) {
 
-    socket.get('nick', function(err, nick) {
-        io.sockets.emit('chat', { nick: 'SYSTEM', message: nick + ' connected' });
-    });
+            // history of messages
+            Chatty.messages.forEach(function(messageObject){
+                io.sockets.emit('chat', messageObject);
+            });
 
-    socket.on('nick', function(newNick) {
-        socket.get('nick', function(err, oldNick){
-            io.sockets.emit('chat', { nick: 'SYSTEM', message: oldNick + ' changed nick to ' + newNick });
-            socket.set('nick', newNick);
+            // set default nick and userId
+            socket.userId = Math.floor((Math.random()*10000)+1);
+            Chatty.users[socket.userId] = 'StupidNoob' + socket.userId;;
+            socket.nick = Chatty.users[socket.userId];
+
+            // connection message
+            io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' connected' });
+
+            // change nick
+            socket.on('nick', function(newNick) {
+                io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' changed nick to ' + newNick });
+                Chatty.users[socket.userId] = newNick;
+            });
+
+            // broadcast chat
+            socket.on('chat', function(message) {
+                var messageObject = { userId: socket.userId, nick: socket.nick, message: message };
+                Chatty.messages.push(messageObject);
+                io.sockets.emit('chat', messageObject);
+            });
+
+            // disconnect
+            socket.on('disconnect', function() {
+                delete Chatty.users[socket.userId];
+                io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' disconnected' });
+            });
         });
-    });
+    }
+};
 
-    socket.on('chat', function(message) {
-        socket.get('nick', function(err, nick) {
-            io.sockets.emit('chat', { nick: nick, message: message });
-        });
-    });
-
-    socket.on('disconnect', function() {
-        socket.get('nick', function(err, nick) {
-            io.sockets.emit('chat', { nick: 'SYSTEM', message: nick + ' disconnected' });
-        });
-    });
-});
+Chatty.init();
