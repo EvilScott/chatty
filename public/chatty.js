@@ -2,7 +2,7 @@ var Chatty = {
     socket: null,
     showTimestamp: true,
     init: function() {
-        Chatty.socket = io.connect('http://www.vertsreis.dev:8080');
+        Chatty.socket = io.connect(window.location.href);
 
         Chatty.socket.on('chat', function(data) {
             var $chat = $('#chat');
