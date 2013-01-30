@@ -1,6 +1,7 @@
 var app = require('express')()
 , server = require('http').createServer(app)
-, io = require('socket.io').listen(server);
+, io = require('socket.io').listen(server)
+, S = require('string');
 
 server.listen(8080);
 
@@ -19,7 +20,7 @@ var Chatty = {
         var messageObject = {
             userId: userId,
             nick: userId == 0 ? 'SYSTEM' : Chatty.users[userId],
-            message: message
+            message: S(message).stripTags().toString()
         };
         Chatty.messages.push(messageObject);
         io.sockets.emit('chat', messageObject);
@@ -50,9 +51,10 @@ var Chatty = {
 
             // change nick
             socket.on('nick', function(newNick) {
+                newNick = S(newNick).stripTags().toString();
                 var oldNick = Chatty.users[socket.userId];
                 Chatty.users[socket.userId] = newNick;
-                io.sockets.emit('changeNick', { userId: socket.userId, nick: socket.nick() });
+                io.sockets.emit('changeNick', { userId: socket.userId, nick: newNick });
                 Chatty.chat(0, oldNick + ' changed nick to ' + newNick);
             });
 
@@ -63,9 +65,10 @@ var Chatty = {
 
             // disconnect
             socket.on('disconnect', function() {
-                io.sockets.emit('removeUser', { userId: socket.userId, nick: socket.nick() });
+                var oldNick = socket.nick();
+                io.sockets.emit('removeUser', { userId: socket.userId });
                 delete Chatty.users[socket.userId];
-                Chatty.chat(0, socket.nick() + ' disconnected');
+                Chatty.chat(0, oldNick + ' disconnected');
             });
         });
     }

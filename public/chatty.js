@@ -1,3 +1,8 @@
+String.prototype.sanitize = function() {
+    console.log(this);
+    return $('<div/>').text(this).html();
+};
+
 var Chatty = {
     socket: null,
     showTimestamp: true,
@@ -5,18 +10,20 @@ var Chatty = {
         Chatty.socket = io.connect(window.location.href);
 
         Chatty.socket.on('chat', function(data) {
+            var message = '<span>' + data.nick.sanitize() + '</span>';
+            message += Chatty.getTimestamp() + ': ' + data.message.sanitize() + "<br />";
+
             var $chat = $('#chat');
-            var message = '<span>' + data.nick + '</span>' + Chatty.getTimestamp() + ': ' + data.message + "<br />";
             $chat.append(message);
             $chat.scrollTop($chat.height());
         });
 
         Chatty.socket.on('addUser', function(data) {
-            $('#users').append("<p id='user-" + data.userId + "'>" + data.nick + "</p>");
+            $('#users').append("<p id='user-" + data.userId + "'>" + data.nick.sanitize() + "</p>");
         });
 
         Chatty.socket.on('changeNick', function(data) {
-            $('#users p#user-' + data.userId).text(data.nick);
+            $('#users p#user-' + data.userId).text(data.nick.sanitize());
         });
 
         Chatty.socket.on('removeUser', function(data) {
@@ -26,14 +33,14 @@ var Chatty = {
         $('input').keypress(function(e) {
             if (e.keyCode == 13) {
                 e.preventDefault();
-                Chatty.socket.emit('chat', $(this).val());
+                Chatty.socket.emit('chat', $(this).val().sanitize());
                 $(this).val('');
             }
         });
 
         var nick = prompt('Choose a nickname');
         if (nick) {
-            Chatty.socket.emit('nick', nick);
+            Chatty.socket.emit('nick', nick.sanitize());
         }
     },
     getTimestamp: function() {
