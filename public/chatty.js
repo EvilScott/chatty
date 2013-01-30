@@ -12,11 +12,15 @@ var Chatty = {
         });
 
         Chatty.socket.on('addUser', function(data) {
-            $('#users').append("<p id='" + data.nick + "'>" + data.nick + "</p>");
+            $('#users').append("<p id='user-" + data.userId + "'>" + data.nick + "</p>");
+        });
+
+        Chatty.socket.on('changeNick', function(data) {
+            $('#users p#user-' + data.userId).text(data.nick);
         });
 
         Chatty.socket.on('removeUser', function(data) {
-            $('#users #' + data.nick).remove();
+            $('#users p#user-' + data.userId).remove();
         });
 
         $('input').keypress(function(e) {

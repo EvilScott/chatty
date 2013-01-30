@@ -15,39 +15,57 @@ app.get('/:filename', function(req, res) {
 var Chatty = {
     users: [],
     messages: [],
+    chat: function(userId, message) {
+        var messageObject = {
+            userId: userId,
+            nick: userId == 0 ? 'SYSTEM' : Chatty.users[userId],
+            message: message
+        };
+        Chatty.messages.push(messageObject);
+        io.sockets.emit('chat', messageObject);
+    },
     init: function() {
         io.sockets.on('connection', function(socket) {
 
+            // all current users
+            Chatty.users.forEach(function(nick, userId) {
+                socket.emit('addUser', { userId: userId, nick: nick });
+            });
+
             // history of messages
             Chatty.messages.forEach(function(messageObject){
-                io.sockets.emit('chat', messageObject);
+                socket.emit('chat', messageObject);
             });
 
             // set default nick and userId
             socket.userId = Math.floor((Math.random()*10000)+1);
-            Chatty.users[socket.userId] = 'StupidNoob' + socket.userId;;
-            socket.nick = Chatty.users[socket.userId];
+            Chatty.users[socket.userId] = 'StupidNoob' + socket.userId;
+            socket.nick = function() { return Chatty.users[this.userId]; };
+
+            // add user to list
+            io.sockets.emit('addUser', { userId: socket.userId, nick: socket.nick() });
 
             // connection message
-            io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' connected' });
+            Chatty.chat(0, socket.nick() + ' connected');
 
             // change nick
             socket.on('nick', function(newNick) {
-                io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' changed nick to ' + newNick });
+                var oldNick = Chatty.users[socket.userId];
                 Chatty.users[socket.userId] = newNick;
+                io.sockets.emit('changeNick', { userId: socket.userId, nick: socket.nick() });
+                Chatty.chat(0, oldNick + ' changed nick to ' + newNick);
             });
 
             // broadcast chat
             socket.on('chat', function(message) {
-                var messageObject = { userId: socket.userId, nick: socket.nick, message: message };
-                Chatty.messages.push(messageObject);
-                io.sockets.emit('chat', messageObject);
+                Chatty.chat(this.userId, message);
             });
 
             // disconnect
             socket.on('disconnect', function() {
+                io.sockets.emit('removeUser', { userId: socket.userId, nick: socket.nick() });
                 delete Chatty.users[socket.userId];
-                io.sockets.emit('chat', { userId: 0, nick: 'SYSTEM', message: socket.nick + ' disconnected' });
+                Chatty.chat(0, socket.nick() + ' disconnected');
             });
         });
     }
