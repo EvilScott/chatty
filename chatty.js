@@ -16,6 +16,7 @@ app.get('/:filename', function(req, res) {
 var Chatty = {
     users: [],
     messages: [],
+
     chat: function(userId, message) {
         var messageObject = {
             userId: userId,
@@ -25,51 +26,53 @@ var Chatty = {
         Chatty.messages.push(messageObject);
         io.sockets.emit('chat', messageObject);
     },
+
+    addUser: function(userId, nick) {
+        Chatty.users[userId] = S(nick).stripTags().toString();
+        io.sockets.emit('addUser', { userId: userId, nick: Chatty.users[userId] });
+        Chatty.chat(0, Chatty.users[userId] + ' connected');
+    },
+
+    changeNick: function(userId, newNick) {
+        var oldNick = Chatty.users[userId];
+        Chatty.users[userId] = S(newNick).stripTags().toString();
+        io.sockets.emit('changeNick', { userId: userId, nick: Chatty.users[userId] });
+        Chatty.chat(0, oldNick + ' changed nick to ' + Chatty.users[userId]);
+    },
+
+    removeUser: function(userId) {
+        var oldNick = Chatty.users[userId];
+        delete Chatty.users[userId];
+        io.sockets.emit('removeUser', { userId: userId });
+        Chatty.chat(0, oldNick + ' disconnected');
+    },
+
     init: function() {
         io.sockets.on('connection', function(socket) {
 
-            // all current users
+            // send all current users to client
             Chatty.users.forEach(function(nick, userId) {
                 socket.emit('addUser', { userId: userId, nick: nick });
             });
 
-            // history of messages
+            // send history of messages to client
             Chatty.messages.forEach(function(messageObject){
                 socket.emit('chat', messageObject);
             });
 
-            // set default nick and userId
+            // add new user
             socket.userId = Math.floor((Math.random()*10000)+1);
-            Chatty.users[socket.userId] = 'StupidNoob' + socket.userId;
+            Chatty.addUser(socket.userId, 'StupidNoob' + socket.userId);
             socket.nick = function() { return Chatty.users[this.userId]; };
 
-            // add user to list
-            io.sockets.emit('addUser', { userId: socket.userId, nick: socket.nick() });
-
-            // connection message
-            Chatty.chat(0, socket.nick() + ' connected');
-
             // change nick
-            socket.on('nick', function(newNick) {
-                newNick = S(newNick).stripTags().toString();
-                var oldNick = Chatty.users[socket.userId];
-                Chatty.users[socket.userId] = newNick;
-                io.sockets.emit('changeNick', { userId: socket.userId, nick: newNick });
-                Chatty.chat(0, oldNick + ' changed nick to ' + newNick);
-            });
+            socket.on('nick', function(newNick) { Chatty.changeNick(this.userId, newNick) });
 
             // broadcast chat
-            socket.on('chat', function(message) {
-                Chatty.chat(this.userId, message);
-            });
+            socket.on('chat', function(message) { Chatty.chat(this.userId, message); });
 
             // disconnect
-            socket.on('disconnect', function() {
-                var oldNick = socket.nick();
-                io.sockets.emit('removeUser', { userId: socket.userId });
-                delete Chatty.users[socket.userId];
-                Chatty.chat(0, oldNick + ' disconnected');
-            });
+            socket.on('disconnect', function() { Chatty.removeUser(this.userId); });
         });
     }
 };
