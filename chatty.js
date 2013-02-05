@@ -16,32 +16,48 @@ app.get('/:filename', function(req, res) {
 var Chatty = {
     users: [],
     messages: [],
+    antiFlood: { maxMessages: 4, timestampWindow: 2000 },
 
     chat: function(userId, message) {
-        var messageObject = {
+        var user = Chatty.users[userId]
+        , now = new Date().getTime()
+        , messageObject = {
             userId: userId,
-            nick: userId == 0 ? 'SYSTEM' : Chatty.users[userId],
+            nick: userId == 0 ? 'SYSTEM' : user.nick,
             message: S(message).stripTags().toString()
         };
+        if (userId != 0) {
+            if (user.timestamps.length < Chatty.antiFlood.maxMessages) {
+                user.timestamps.push(now);
+            } else {
+                var past = user.timestamps.shift();
+                user.timestamps.push(now);
+                if ((now - past) < Chatty.antiFlood.timestampWindow) {
+                    return;
+                }
+            }
+        }
         Chatty.messages.push(messageObject);
         io.sockets.emit('chat', messageObject);
     },
 
     addUser: function(userId, nick) {
-        Chatty.users[userId] = S(nick).stripTags().toString();
-        io.sockets.emit('addUser', { userId: userId, nick: Chatty.users[userId] });
-        Chatty.chat(0, Chatty.users[userId] + ' connected');
+        var nick = S(nick).stripTags().toString();
+        Chatty.users[userId] = { nick: nick, timestamps: [] };
+        io.sockets.emit('addUser', { userId: userId, nick: nick });
+        Chatty.chat(0, nick + ' connected');
     },
 
     changeNick: function(userId, newNick) {
-        var oldNick = Chatty.users[userId];
-        Chatty.users[userId] = S(newNick).stripTags().toString();
-        io.sockets.emit('changeNick', { userId: userId, nick: Chatty.users[userId] });
-        Chatty.chat(0, oldNick + ' changed nick to ' + Chatty.users[userId]);
+        var oldNick = Chatty.users[userId].nick
+        , newNick = S(newNick).stripTags().toString();
+        Chatty.users[userId].nick = newNick;
+        io.sockets.emit('changeNick', { userId: userId, nick: newNick });
+        Chatty.chat(0, oldNick + ' changed nick to ' + newNick);
     },
 
     removeUser: function(userId) {
-        var oldNick = Chatty.users[userId];
+        var oldNick = Chatty.users[userId].nick;
         delete Chatty.users[userId];
         io.sockets.emit('removeUser', { userId: userId });
         Chatty.chat(0, oldNick + ' disconnected');
