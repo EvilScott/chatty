@@ -1,37 +1,37 @@
 body {
     background: #eee;
-}
-
-h1 {
     text-align: center;
 }
 
 div#container {
-    margin: 0 auto 20px;
-    text-align: center;
+    display: inline-block;
 }
 
-div#chat, div#users {
+div#container:after {
+    content: "";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+}
+
+div#chat, select#users {
+    float: left;
     background: white;
     border: 1px solid #ccc;
     height: 400px;
     text-align: left;
-    padding: 10px;
     overflow-y: scroll;
 }
 
 div#chat {
-    display: inline-block;
     width: 600px;
+    padding: 0 10px;
+    margin-right: 10px;
 }
 
-div#users {
-    display: inline-block;
+select#users {
     width: 200px;
-}
-
-div#users p {
-    margin: 0;
 }
 
 span {
@@ -41,5 +41,5 @@ span {
 input[type="text"] {
     display: block;
     width: 600px;
-    margin: 0 auto;
+    margin: 10px auto 0;
 }

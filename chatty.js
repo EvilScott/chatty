@@ -78,7 +78,7 @@ var Chatty = {
 
             // add new user
             socket.userId = Math.floor((Math.random()*10000)+1);
-            Chatty.addUser(socket.userId, 'StupidNoob' + socket.userId);
+            Chatty.addUser(socket.userId, 'NewUser' + socket.userId);
             socket.nick = function() { return Chatty.users[this.userId]; };
 
             // change nick
