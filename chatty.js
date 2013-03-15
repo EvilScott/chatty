@@ -18,7 +18,7 @@ app.configure(function() {
 
 server.listen(8080);
 
-app.get('/', function(req, res) {
+app.get('*', function(req, res) {
     res.sendfile(__dirname + '/public/index.html');
 });
 
@@ -73,7 +73,7 @@ var Chatty = {
     },
 
     getUserId: function(socket) {
-        return socket.connection.remoteAddress;
+        return socket.handshake.address.address;
     },
 
     init: function() {
