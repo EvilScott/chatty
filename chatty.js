@@ -1,16 +1,25 @@
-var app = require('express')()
-, server = require('http').createServer(app)
+var lessMiddleware = require('less-middleware')
+, express = require('express')
+, app = express()
+, http = require('http')
+, server = http.createServer(app)
 , io = require('socket.io').listen(server)
 , S = require('string');
+
+app.configure(function() {
+    app.use(lessMiddleware({
+        dest     : __dirname + '/public/css',
+        src      : __dirname + '/public/less',
+        prefix   : '/css',
+        compress : true
+    }));
+    app.use(express.static(__dirname + '/public'));
+});
 
 server.listen(8080);
 
 app.get('/', function(req, res) {
     res.sendfile(__dirname + '/public/index.html');
-});
-
-app.get('/:filename', function(req, res) {
-    res.sendfile(__dirname + '/public/' + req.params.filename);
 });
 
 var Chatty = {
@@ -63,6 +72,10 @@ var Chatty = {
         Chatty.chat(0, oldNick + ' disconnected');
     },
 
+    getUserId: function(socket) {
+        return socket.connection.remoteAddress;
+    },
+
     init: function() {
         io.sockets.on('connection', function(socket) {
 
@@ -77,7 +90,7 @@ var Chatty = {
             });
 
             // add new user
-            socket.userId = Math.floor((Math.random()*10000)+1);
+            socket.userId = Chatty.getUserId(socket);
             Chatty.addUser(socket.userId, 'NewUser' + socket.userId);
             socket.nick = function() { return Chatty.users[this.userId]; };
 
