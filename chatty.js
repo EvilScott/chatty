@@ -25,83 +25,123 @@ app.get('*', function(req, res) {
 var Chatty = {
     users: [],
     messages: [],
-    antiFlood: { maxMessages: 4, timestampWindow: 2000 },
+    antiFlood: { maxMessages: 8, timestampWindow: 2000 },
 
-    chat: function(userId, message) {
-        var user = Chatty.users[userId]
+    chat: function(userId, message, channel) {
+
+        // create message object
+        var user = userId == 0 ? null : Chatty.users[channel][userId]
         , now = new Date().getTime()
         , messageObject = {
             userId: userId,
             nick: userId == 0 ? 'SYSTEM' : user.nick,
-            message: S(message).stripTags().toString()
+            message: S(message).stripTags().toString(),
+            channel: channel
         };
+
+        // check for flooding
         if (userId != 0) {
             if (user.timestamps.length < Chatty.antiFlood.maxMessages) {
                 user.timestamps.push(now);
             } else {
                 var past = user.timestamps.shift();
                 user.timestamps.push(now);
-                if ((now - past) < Chatty.antiFlood.timestampWindow) {
-                    return;
-                }
+                if ((now - past) < Chatty.antiFlood.timestampWindow) return;
             }
         }
-        Chatty.messages.push(messageObject);
-        io.sockets.emit('chat', messageObject);
+
+        // create channel messages if it does not exist
+        if (!Chatty.messages[channel]) Chatty.messages[channel] = [];
+
+        Chatty.messages[channel].push(messageObject);
+        io.sockets.emit('chat', messageObject); //TODO only push to users in channels
     },
 
-    addUser: function(userId, nick) {
-        var nick = S(nick).stripTags().toString();
-        Chatty.users[userId] = { nick: nick, timestamps: [] };
-        io.sockets.emit('addUser', { userId: userId, nick: nick });
-        Chatty.chat(0, nick + ' connected');
+    addUser: function(userId, nick, channel) {
+
+        // create channel users if it does not exist
+        if (!Chatty.users[channel]) Chatty.users[channel] = [];
+
+        // sanitize nick
+        nick = S(nick).stripTags().toString();
+
+        // do not add existing user
+        if (Chatty.users[channel][userId]) {
+            Chatty.changeNick(userId, nick, channel);
+
+        // add new user
+        } else {
+            Chatty.users[channel][userId] = { nick: nick, timestamps: [] };
+            io.sockets.emit('addUser', { userId: userId, nick: nick, channel: channel });
+            Chatty.chat(0, nick + ' has joined', channel);
+        }
     },
 
-    changeNick: function(userId, newNick) {
-        var oldNick = Chatty.users[userId].nick
-        , newNick = S(newNick).stripTags().toString();
-        Chatty.users[userId].nick = newNick;
-        io.sockets.emit('changeNick', { userId: userId, nick: newNick });
-        Chatty.chat(0, oldNick + ' changed nick to ' + newNick);
+    changeNick: function(userId, newNick, channel) {
+        var oldNick = Chatty.users[channel][userId].nick;
+        newNick = S(newNick).stripTags().toString();
+        Chatty.users[channel][userId].nick = newNick;
+        io.sockets.emit('changeNick', { userId: userId, nick: newNick, channel: channel });
+        Chatty.chat(0, oldNick + ' changed nick to ' + newNick, channel);
     },
 
-    removeUser: function(userId) {
-        var oldNick = Chatty.users[userId].nick;
-        delete Chatty.users[userId];
-        io.sockets.emit('removeUser', { userId: userId });
-        Chatty.chat(0, oldNick + ' disconnected');
+    removeUser: function(userId, channel) {
+        var oldNick = Chatty.users[channel][userId].nick;
+        delete Chatty.users[channel][userId];
+        io.sockets.emit('removeUser', { userId: userId, channel: channel });
+        Chatty.chat(0, oldNick + ' has left', channel);
     },
 
     getUserId: function(socket) {
-        return socket.handshake.address.address;
+        return socket.handshake.address.address.replace(/\./g,'-');
     },
 
     init: function() {
         io.sockets.on('connection', function(socket) {
 
-            // send all current users to client
-            Chatty.users.forEach(function(nick, userId) {
-                socket.emit('addUser', { userId: userId, nick: nick });
-            });
-
-            // send history of messages to client
-            Chatty.messages.forEach(function(messageObject){
-                socket.emit('chat', messageObject);
-            });
-
-            // add new user
             socket.userId = Chatty.getUserId(socket);
-            Chatty.addUser(socket.userId, 'NewUser' + socket.userId);
-            socket.nick = function() { return Chatty.users[this.userId]; };
+
+            // join channel
+            socket.on('join', function(data) {
+                var channel = data.channel
+                , nick = data.nick;
+
+                // create channel messages if it does not exist
+                if (!Chatty.messages[channel]) Chatty.messages[channel] = [];
+
+                // create channel users if it does not exist
+                if (!Chatty.users[channel]) Chatty.users[channel] = [];
+
+                // send all current users to client
+                for (var userId in Chatty.users[channel]) {
+                    var userObject = { userId: userId, nick: Chatty.users[channel][userId].nick, channel: channel };
+                    socket.emit('addUser', userObject);
+                }
+
+                // send history of messages to client
+                Chatty.messages[channel].forEach(function(messageObject){
+                    socket.emit('chat', messageObject);
+                });
+
+                // add new user
+                if (!Chatty.users[channel][socket.userId]) Chatty.addUser(socket.userId, nick, channel);
+            });
 
             // change nick
-            socket.on('nick', function(newNick) { Chatty.changeNick(this.userId, newNick) });
+            socket.on('changeNick', function(data) { Chatty.changeNick(socket.userId, data.nick, data.channel); });
 
             // broadcast chat
-            socket.on('chat', function(message) { Chatty.chat(this.userId, message); });
+            socket.on('chat', function(data) { Chatty.chat(socket.userId, data.message, data.channel); });
+
+            // leave channel
+            socket.on('leave', function(data) { Chatty.removeUser(socket.userId, data.channel); });
 
             // disconnect
-            socket.on('disconnect', function() { Chatty.removeUser(this.userId); });
+            socket.on('disconnect', function() {
+                Chatty.users.forEach(function(channel, channelName) {
+                    if (channel[socket.userId]) Chatty.removeUser(socket.userId, channelName);
+                });
+            });
         });
     }
 };

@@ -1,1 +1,7 @@
-body #main{background:#cccccc;}
+.clearfix:after{content:" ";display:block;height:0;clear:both;overflow:hidden;visibility:hidden;}
+body{background:#eeeeee;}body #main .channel{margin:50px auto 0;width:560px;}body #main .channel div.name{margin-bottom:5px;width:560px;font-size:1.25em;}
+body #main .channel div.chat,body #main .channel div.users{background:#ffffff;outline:1px solid #cccccc;float:left;height:400px;}
+body #main .channel div.chat{width:400px;overflow-y:scroll;word-wrap:break-word;}
+body #main .channel div.users{margin-left:10px;width:150px;overflow-y:scroll;overflow-x:hidden;}
+body #main .channel div.input{height:20px;margin-top:10px;}body #main .channel div.input input[type="text"]{width:560px;}
+body #other-channels{width:560px;margin:20px auto 0;text-align:center;}body #other-channels a{padding:0 5px;}

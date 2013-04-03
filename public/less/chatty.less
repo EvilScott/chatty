@@ -1,7 +1,68 @@
-@background: #ccc;
+@lightgray: #ccc;
+@lightergray: #eee;
+@white: #fff;
+
+.clearfix:after {
+    content: " ";
+    display: block;
+    height: 0;
+    clear: both;
+    overflow: hidden;
+    visibility: hidden;
+}
 
 body {
-    #main {
-        background: @background;
+    background: @lightergray;
+
+    #main .channel {
+        margin: 50px auto 0;
+        width: 560px;
+
+        div {
+            &.name {
+                margin-bottom: 5px;
+                width: 560px;
+                font-size: 1.25em;
+            }
+
+            &.chat, &.users {
+                background: @white;
+                outline: 1px solid @lightgray;
+                float: left;
+                height: 400px;
+            }
+
+            &.chat {
+                width: 400px;
+                overflow-y: scroll;
+                word-wrap: break-word;
+            }
+
+            &.users {
+                margin-left: 10px;
+                width: 150px;
+                overflow-y: scroll;
+                overflow-x: hidden;
+            }
+
+            &.input {
+                height: 20px;
+                margin-top: 10px;
+
+                input[type="text"] {
+                    width: 560px;
+                }
+            }
+        }
+    }
+
+    #other-channels {
+        width: 560px;
+        margin: 20px auto 0;
+        text-align: center;
+
+        a {
+            padding: 0 5px;
+        }
     }
 }
