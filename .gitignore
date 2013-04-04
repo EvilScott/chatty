@@ -1,3 +1,4 @@
 .idea/*
 *.iml
 public/js/boilerplate.js
+out/*
