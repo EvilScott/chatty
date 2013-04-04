@@ -54,10 +54,12 @@ var Chatty = {
         if (!Chatty.messages[channel]) Chatty.messages[channel] = [];
 
         Chatty.messages[channel].push(messageObject);
-        io.sockets.emit('chat', messageObject); //TODO only push to users in channels
+        for (var userId in Chatty.users[channel]) {
+            Chatty.users[channel][userId].socket.emit('chat', messageObject);
+        }
     },
 
-    addUser: function(userId, nick, channel) {
+    addUser: function(userId, nick, channel, socket) {
 
         // create channel users if it does not exist
         if (!Chatty.users[channel]) Chatty.users[channel] = [];
@@ -71,7 +73,7 @@ var Chatty = {
 
         // add new user
         } else {
-            Chatty.users[channel][userId] = { nick: nick, timestamps: [] };
+            Chatty.users[channel][userId] = { nick: nick, timestamps: [], socket: socket };
             io.sockets.emit('addUser', { userId: userId, nick: nick, channel: channel });
             Chatty.chat(0, nick + ' has joined', channel);
         }
@@ -114,7 +116,11 @@ var Chatty = {
 
                 // send all current users to client
                 for (var userId in Chatty.users[channel]) {
-                    var userObject = { userId: userId, nick: Chatty.users[channel][userId].nick, channel: channel };
+                    var userObject = {
+                        userId: userId,
+                        nick: Chatty.users[channel][userId].nick,
+                        channel: channel
+                    };
                     socket.emit('addUser', userObject);
                 }
 
@@ -124,7 +130,7 @@ var Chatty = {
                 });
 
                 // add new user
-                if (!Chatty.users[channel][socket.userId]) Chatty.addUser(socket.userId, nick, channel);
+                if (!Chatty.users[channel][socket.userId]) Chatty.addUser(socket.userId, nick, channel, socket);
             });
 
             // change nick
@@ -138,9 +144,9 @@ var Chatty = {
 
             // disconnect
             socket.on('disconnect', function() {
-                Chatty.users.forEach(function(channel, channelName) {
-                    if (channel[socket.userId]) Chatty.removeUser(socket.userId, channelName);
-                });
+                for (var channelName in Chatty.users) {
+                    if (Chatty.users[channelName][socket.userId]) Chatty.removeUser(socket.userId, channelName);
+                }
             });
         });
     }
