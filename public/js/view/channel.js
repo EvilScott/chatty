@@ -86,7 +86,7 @@ define([
 
         scrollToLatest: function() {
             var $chat = this.$el.find('.chat');
-            $chat.scrollTop($chat.scrollHeight);
+            $chat.scrollTop($chat[0].scrollHeight);
         }
     });
 });
