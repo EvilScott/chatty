@@ -24,7 +24,6 @@ define([
 
             this.socket.on('chat', function(data) { self.chat(data); });
             this.socket.on('addUser', function(data) { self.addUser(data); });
-            this.socket.on('changeNick', function(data) { self.changeNick(data); });
             this.socket.on('removeUser', function(data) { self.removeUser(data); });
 
             if (!this.nick && !(this.nick = prompt('Choose a nickname'))) {
@@ -62,12 +61,6 @@ define([
 
             var user = "<div id='user-" + data.userId + "'>" + data.nick.sanitize() + "</div>";
             this.$el.find('.users').append(user);
-        },
-
-        changeNick: function(data) {
-            if (data.channel != this.channel) return;
-
-            this.$el.find('.users #user-' + data.userId).text(data.nick.sanitize());
         },
 
         removeUser: function(data) {
